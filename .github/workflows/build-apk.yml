@@ -29,6 +29,7 @@ jobs:
         run: |
           node --check app/src/main/assets/v2_patch.js
           node --check app/src/main/assets/v3_patch.js
+          node --check app/src/main/assets/v3_ui_fix.js
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
