@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main, app-v1 ]
+    branches: [ main, app-v1, app-v2 ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -43,11 +43,11 @@ jobs:
       - name: Prepare APK
         run: |
           mkdir -p output
-          cp app/build/outputs/apk/debug/app-debug.apk output/YiLiFanQieQie_v1.apk
+          cp app/build/outputs/apk/debug/app-debug.apk output/YiLiFanQieQie_v2.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: YiLiFanQieQie_v1
-          path: output/YiLiFanQieQie_v1.apk
+          name: YiLiFanQieQie_v2
+          path: output/YiLiFanQieQie_v2.apk
           if-no-files-found: error
