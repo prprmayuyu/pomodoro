@@ -6,11 +6,26 @@ android {
     namespace = 'com.gina.pomodoro'
     compileSdk = 36
 
+    signingConfigs {
+        stableDebug {
+            storeFile = file('pomodoro-debug.jks')
+            storePassword = 'tomato-dev'
+            keyAlias = 'pomodoro'
+            keyPassword = 'tomato-dev'
+        }
+    }
+
     defaultConfig {
         applicationId = 'com.gina.pomodoro'
         minSdk = 26
         targetSdk = 36
         versionCode = 2
         versionName = '1.1'
+    }
+
+    buildTypes {
+        debug {
+            signingConfig = signingConfigs.stableDebug
+        }
     }
 }
