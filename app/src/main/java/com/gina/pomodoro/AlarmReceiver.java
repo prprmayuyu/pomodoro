@@ -11,6 +11,7 @@ import android.os.Build;
 public class AlarmReceiver extends BroadcastReceiver {
     private static final String CHANNEL_TIMER = "pomodoro_timer";
     private static final String CHANNEL_DAILY = "daily_reminders";
+    private static final String CHANNEL_LIFESTYLE = "lifestyle_reminders";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -23,10 +24,23 @@ public class AlarmReceiver extends BroadcastReceiver {
             int hour = intent.getIntExtra("hour", 9);
             int minute = intent.getIntExtra("minute", 0);
             String message = intent.getStringExtra("message");
-            showNotification(context, CHANNEL_DAILY, 1000 + Math.abs((id == null ? "daily" : id).hashCode() % 100000),
+            showNotification(context, CHANNEL_DAILY,
+                    1000 + Math.abs((id == null ? "daily" : id).hashCode() % 100000),
                     "一粒番茄茄", message == null ? "该开始工作了" : message);
             ReminderScheduler.scheduleDailyReminder(context, id == null ? "default_work" : id, hour, minute,
                     message == null ? "该开始工作了" : message, false);
+            return;
+        }
+
+        if ("lifestyle".equals(type)) {
+            String id = intent.getStringExtra("id");
+            String title = intent.getStringExtra("title");
+            String message = intent.getStringExtra("message");
+            showNotification(context, CHANNEL_LIFESTYLE,
+                    3000 + Math.abs((id == null ? "lifestyle" : id).hashCode() % 100000),
+                    title == null || title.trim().isEmpty() ? "提醒" : title,
+                    message == null || message.trim().isEmpty() ? "该休息一下了。" : message);
+            ReminderScheduler.onLifestyleReminderFired(context, id);
             return;
         }
 
@@ -54,12 +68,18 @@ public class AlarmReceiver extends BroadcastReceiver {
         timer.enableVibration(true);
 
         NotificationChannel daily = new NotificationChannel(
-                CHANNEL_DAILY, "一粒番茄茄 · 每日提醒", NotificationManager.IMPORTANCE_DEFAULT);
-        daily.setDescription("自定义工作提醒");
+                CHANNEL_DAILY, "一粒番茄茄 · 旧版提醒", NotificationManager.IMPORTANCE_DEFAULT);
+        daily.setDescription("兼容旧版本提醒");
         daily.enableVibration(true);
+
+        NotificationChannel lifestyle = new NotificationChannel(
+                CHANNEL_LIFESTYLE, "一粒番茄茄 · 生活提醒", NotificationManager.IMPORTANCE_DEFAULT);
+        lifestyle.setDescription("喝水、活动、运动和自定义生活提醒");
+        lifestyle.enableVibration(true);
 
         nm.createNotificationChannel(timer);
         nm.createNotificationChannel(daily);
+        nm.createNotificationChannel(lifestyle);
     }
 
     private static void showNotification(Context context, String channelId, int id, String title, String text) {
