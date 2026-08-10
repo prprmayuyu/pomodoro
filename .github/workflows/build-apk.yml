@@ -31,6 +31,9 @@ jobs:
       - name: Install Android SDK 36
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
+      - name: Prepare stable debug signing key
+        run: base64 --decode app/signing/pomodoro-debug.jks.b64 > app/pomodoro-debug.jks
+
       - name: Set up Gradle 9.1.0
         uses: gradle/actions/setup-gradle@v6
         with:
