@@ -1,0 +1,16 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace = 'com.gina.pomodoro'
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = 'com.gina.pomodoro'
+        minSdk = 26
+        targetSdk = 36
+        versionCode = 1
+        versionName = '1.0'
+    }
+}
