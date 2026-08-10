@@ -1,6 +1,6 @@
-# Pomodoro
+# 一粒番茄茄
 
-极简 Android 番茄钟。
+一个极简 Android 番茄钟。
 
 - 25 分钟专注 + 5 分钟休息
 - 专注期间保持屏幕常亮
@@ -11,4 +11,4 @@
 - 支持自定义每日提醒时间与通知文案
 - 专注结束和休息结束系统通知
 
-GitHub Actions 会在 `main` 分支更新时自动构建 Debug APK，产物名为 `Pomodoro_v1`。
+GitHub Actions 会在 `main` 分支更新时自动构建 Debug APK。
