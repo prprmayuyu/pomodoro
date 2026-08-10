@@ -72,7 +72,7 @@ public class MainActivity extends Activity {
                         "(function(){" +
                                 "function add(src,id,next){if(document.getElementById(id)){if(next)next();return;}" +
                                 "var s=document.createElement('script');s.id=id;s.src=src;if(next)s.onload=next;document.body.appendChild(s);}" +
-                                "add('v2_patch.js','v2Patch',function(){add('v3_patch.js','v3Patch');});" +
+                                "add('v2_patch.js','v2Patch',function(){add('v3_patch.js','v3Patch',function(){add('v3_ui_fix.js','v3UiFix');});});" +
                                 "})();",
                         null
                 );
@@ -143,7 +143,6 @@ public class MainActivity extends Activity {
             ReminderScheduler.cancelPomodoro(MainActivity.this, true);
         }
 
-        // v1/v2 compatibility. v3 lifestyle reminders use scheduleLifestyleReminder().
         @JavascriptInterface
         public void scheduleDailyReminder(String id, int hour, int minute, String message) {
             ReminderScheduler.scheduleDailyReminder(MainActivity.this, id, hour, minute, message, true);
