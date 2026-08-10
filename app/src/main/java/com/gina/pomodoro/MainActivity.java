@@ -2,10 +2,16 @@ package com.gina.pomodoro;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlarmManager;
-import android.app.NotificationManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ShortcutInfo;
+import android.content.pm.ShortcutManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Typeface;
+import android.graphics.drawable.Icon;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -63,9 +69,11 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 view.evaluateJavascript(
-                        "(function(){if(document.getElementById('v2Patch'))return;" +
-                                "var s=document.createElement('script');s.id='v2Patch';" +
-                                "s.src='v2_patch.js';document.body.appendChild(s);})();",
+                        "(function(){" +
+                                "function add(src,id,next){if(document.getElementById(id)){if(next)next();return;}" +
+                                "var s=document.createElement('script');s.id=id;s.src=src;if(next)s.onload=next;document.body.appendChild(s);}" +
+                                "add('v2_patch.js','v2Patch',function(){add('v3_patch.js','v3Patch');});" +
+                                "})();",
                         null
                 );
             }
@@ -87,6 +95,43 @@ public class MainActivity extends Activity {
                 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
     }
 
+    private Bitmap buildShortcutBitmap(String glyph, String theme) {
+        final int size = 432;
+        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+
+        int background;
+        int foreground;
+        if ("sweet".equals(theme)) {
+            background = Color.rgb(255, 240, 245);
+            foreground = Color.rgb(201, 135, 168);
+        } else if ("forest".equals(theme)) {
+            background = Color.rgb(240, 243, 235);
+            foreground = Color.rgb(58, 90, 64);
+        } else {
+            background = Color.WHITE;
+            foreground = Color.rgb(17, 17, 17);
+        }
+        canvas.drawColor(background);
+
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
+        paint.setColor(foreground);
+        paint.setTextAlign(Paint.Align.CENTER);
+        paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
+
+        float textSize = 225f;
+        paint.setTextSize(textSize);
+        final float maxWidth = 282f;
+        while (paint.measureText(glyph) > maxWidth && textSize > 72f) {
+            textSize -= 8f;
+            paint.setTextSize(textSize);
+        }
+        Paint.FontMetrics fm = paint.getFontMetrics();
+        float y = size / 2f - (fm.ascent + fm.descent) / 2f;
+        canvas.drawText(glyph, size / 2f, y, paint);
+        return bitmap;
+    }
+
     private final class AndroidBridge {
         @JavascriptInterface
         public void schedulePomodoro(long focusEndMs, long breakEndMs) {
@@ -98,6 +143,7 @@ public class MainActivity extends Activity {
             ReminderScheduler.cancelPomodoro(MainActivity.this, true);
         }
 
+        // v1/v2 compatibility. v3 lifestyle reminders use scheduleLifestyleReminder().
         @JavascriptInterface
         public void scheduleDailyReminder(String id, int hour, int minute, String message) {
             ReminderScheduler.scheduleDailyReminder(MainActivity.this, id, hour, minute, message, true);
@@ -106,6 +152,16 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void cancelDailyReminder(String id) {
             ReminderScheduler.cancelDailyReminder(MainActivity.this, id, true);
+        }
+
+        @JavascriptInterface
+        public void scheduleLifestyleReminder(String json) {
+            ReminderScheduler.scheduleLifestyleReminder(MainActivity.this, json, true);
+        }
+
+        @JavascriptInterface
+        public void cancelLifestyleReminder(String id) {
+            ReminderScheduler.cancelLifestyleReminder(MainActivity.this, id, true);
         }
 
         @JavascriptInterface
@@ -169,6 +225,37 @@ public class MainActivity extends Activity {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     getWindow().getDecorView().setSystemUiVisibility(flags);
                 }
+            });
+        }
+
+        @JavascriptInterface
+        public boolean canPinCustomShortcut() {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false;
+            ShortcutManager manager = getSystemService(ShortcutManager.class);
+            return manager != null && manager.isRequestPinShortcutSupported();
+        }
+
+        @JavascriptInterface
+        public void pinCustomShortcut(String glyph, String theme) {
+            final String value = glyph == null ? "" : glyph.trim();
+            if (value.isEmpty() || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+            runOnUiThread(() -> {
+                ShortcutManager manager = getSystemService(ShortcutManager.class);
+                if (manager == null || !manager.isRequestPinShortcutSupported()) return;
+
+                Bitmap bitmap = buildShortcutBitmap(value, theme);
+                Intent open = new Intent(MainActivity.this, MainActivity.class)
+                        .setAction(Intent.ACTION_VIEW)
+                        .putExtra("custom_shortcut", true);
+                ShortcutInfo shortcut = new ShortcutInfo.Builder(
+                        MainActivity.this,
+                        "custom_icon_" + System.currentTimeMillis())
+                        .setShortLabel("一粒番茄茄")
+                        .setLongLabel("一粒番茄茄")
+                        .setIcon(Icon.createWithAdaptiveBitmap(bitmap))
+                        .setIntent(open)
+                        .build();
+                manager.requestPinShortcut(shortcut, null);
             });
         }
     }
