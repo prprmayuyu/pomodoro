@@ -2,6 +2,8 @@ package com.gina.pomodoro;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ShortcutInfo;
@@ -72,7 +74,11 @@ public class MainActivity extends Activity {
                         "(function(){" +
                                 "function add(src,id,next){if(document.getElementById(id)){if(next)next();return;}" +
                                 "var s=document.createElement('script');s.id=id;s.src=src;if(next)s.onload=next;document.body.appendChild(s);}" +
-                                "add('v2_patch.js','v2Patch',function(){add('v3_patch.js','v3Patch',function(){add('v3_ui_fix.js','v3UiFix');});});" +
+                                "add('v2_patch.js','v2Patch',function(){" +
+                                "add('v3_patch.js','v3Patch',function(){" +
+                                "add('v3_ui_fix.js','v3UiFix',function(){add('v4_patch.js','v4Patch');});" +
+                                "});" +
+                                "});" +
                                 "})();",
                         null
                 );
@@ -130,6 +136,27 @@ public class MainActivity extends Activity {
         float y = size / 2f - (fm.ascent + fm.descent) / 2f;
         canvas.drawText(glyph, size / 2f, y, paint);
         return bitmap;
+    }
+
+    private void scheduleTestReminderInternal(int seconds) {
+        int delay = Math.max(5, Math.min(60, seconds));
+        long trigger = System.currentTimeMillis() + delay * 1000L;
+        Intent intent = new Intent(this, AlarmReceiver.class);
+        intent.setAction("com.gina.pomodoro.TEST_REMINDER");
+        intent.putExtra("type", "test_alarm");
+        PendingIntent pi = PendingIntent.getBroadcast(
+                this,
+                99001,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+        AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
+        if (am == null) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) {
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
+        } else {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
+        }
     }
 
     private final class AndroidBridge {
@@ -204,6 +231,36 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public boolean isReminderSoundEnabled() {
+            return AlertPreferences.isSoundEnabled(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public void setReminderSoundEnabled(boolean enabled) {
+            AlertPreferences.setSoundEnabled(MainActivity.this, enabled);
+        }
+
+        @JavascriptInterface
+        public boolean isReminderVibrationEnabled() {
+            return AlertPreferences.isVibrationEnabled(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public void setReminderVibrationEnabled(boolean enabled) {
+            AlertPreferences.setVibrationEnabled(MainActivity.this, enabled);
+        }
+
+        @JavascriptInterface
+        public void sendTestNotification() {
+            runOnUiThread(() -> AlarmReceiver.sendTestNotification(MainActivity.this));
+        }
+
+        @JavascriptInterface
+        public void scheduleTestReminder(int seconds) {
+            scheduleTestReminderInternal(seconds);
+        }
+
+        @JavascriptInterface
         public void setKeepScreenOn(boolean keepOn) {
             runOnUiThread(() -> {
                 if (keepOn) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -262,6 +319,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        ReminderScheduler.rescheduleAll(this);
         if (webView != null) {
             webView.evaluateJavascript("window.onNativeResume && window.onNativeResume();", null);
         }
