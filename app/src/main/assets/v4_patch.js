@@ -142,4 +142,10 @@
   };
 
   install();
+  if (!document.getElementById('v5Main')) {
+    const s = document.createElement('script');
+    s.id = 'v5Main';
+    s.src = 'v5_main.js';
+    document.body.appendChild(s);
+  }
 })();
